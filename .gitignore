@@ -1,0 +1,17 @@
+# Virtual environment — never upload this
+venv/
+
+# Python cache files — auto-generated, not needed
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code settings
+.vscode/
+
+# Environment variables — never upload secrets
+.env
+
+# Windows junk
+Thumbs.db
+desktop.ini

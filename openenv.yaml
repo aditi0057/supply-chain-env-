@@ -1,0 +1,47 @@
+name: supply-chain-triage
+version: "1.0.0"
+description: >
+  A supply chain disruption triage environment where AI agents 
+  learn to make cost-effective decisions under budget constraints.
+  Simulates real crisis scenarios faced by operations managers.
+
+author: your-huggingface-username
+license: MIT
+
+tasks:
+  - id: task1_easy
+    difficulty: easy
+    description: "3 suppliers disrupted, clear signals, $30,000 budget"
+    expected_score_range: "0.7 - 1.0"
+
+  - id: task2_medium
+    difficulty: medium
+    description: "6 suppliers disrupted, budget tradeoffs, $50,000 budget"
+    expected_score_range: "0.5 - 0.8"
+
+  - id: task3_hard
+    difficulty: hard
+    description: "10 suppliers disrupted, complex dependencies, $70,000 budget"
+    expected_score_range: "0.3 - 0.7"
+
+endpoints:
+  health:  GET  /health
+  reset:   POST /reset
+  step:    POST /step
+  state:   GET  /state
+  tasks:   GET  /tasks
+  actions: GET  /actions
+
+action_space:
+  - wait
+  - find_alternate
+  - use_safety_stock
+  - expedite
+
+observation_fields:
+  - disrupted_suppliers
+  - affected_products
+  - budget_remaining_usd
+  - decisions_remaining
+  - current_score
+  - last_action_result
