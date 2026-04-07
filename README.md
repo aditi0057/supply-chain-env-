@@ -1,3 +1,13 @@
+---
+title: Supply Chain Disruption Triage
+emoji: 🏭
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+license: mit
+---
+
 # Supply Chain Disruption Triage Environment
 
 An OpenEnv environment where AI agents learn to triage supply chain 
