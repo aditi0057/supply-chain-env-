@@ -25,7 +25,7 @@ TEMPERATURE = 0.2    # low = more consistent decisions
 MAX_TOKENS  = 300    # enough for a decision + reasoning
 
 # ── Server location ──
-ENV_BASE_URL = os.getenv("ENV_BASE_URL", "http://localhost:8000")
+ENV_BASE_URL = os.getenv("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
 
 # ── System prompt ──
 # This tells the AI what it is and how to respond
