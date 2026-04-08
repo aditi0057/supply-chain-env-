@@ -16,7 +16,7 @@ from client import SupplyChainEnv
 
 # ── Load credentials from environment variables ──
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
+MODEL_NAME = os.getenv("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.3")
 API_KEY      = os.getenv("HF_TOKEN")     or os.getenv("API_KEY", "")
 
 # ── Settings ──
