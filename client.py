@@ -1,6 +1,5 @@
 # client.py
-# This is what users import to connect to the environment.
-# It handles all HTTP communication so users just call reset() and step().
+
 
 import requests
 from typing import Optional

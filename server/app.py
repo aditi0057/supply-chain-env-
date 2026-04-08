@@ -1,11 +1,10 @@
 # server/app.py
-# This file turns our environment into a running web server.
-# FastAPI handles all the HTTP endpoints automatically.
+
 
 import sys
 import os
 
-# Add parent folder to path so we can import models.py
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
@@ -15,7 +14,7 @@ from typing import Optional
 from server.environment import SupplyChainEnvironment
 from models import SupplyChainAction
 
-# ── Create the FastAPI app ──
+
 app = FastAPI(
     title="Supply Chain Disruption Triage Environment",
     description="An OpenEnv environment where AI agents learn to triage "
@@ -24,8 +23,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# ── Allow connections from anywhere ──
-# This is needed so HuggingFace Spaces can talk to your server
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,12 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Create one shared environment instance ──
+
 env = SupplyChainEnvironment()
 
 
-# ── Request body models ──
-# These define what JSON the server expects to receive
+
 
 class ResetRequest(BaseModel):
     task_id: Optional[str] = "task1_easy"
@@ -50,9 +47,7 @@ class StepRequest(BaseModel):
     reasoning: str = ""
 
 
-# ────────────────────────────────────────────
-# ENDPOINTS
-# ────────────────────────────────────────────
+
 
 @app.get("/health")
 def health():

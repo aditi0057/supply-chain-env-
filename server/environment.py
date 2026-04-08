@@ -1,12 +1,11 @@
 # server/environment.py
-# This is the brain of the Supply Chain Disruption Triage environment.
-# It simulates real supply chain crisis scenarios and scores the AI agent's decisions.
+
 
 import uuid
 import random
 from typing import Dict, List, Optional, Tuple
 
-# We add the parent folder to path so we can import models.py
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,56 +19,50 @@ from models import (
 )
 
 
-# ─────────────────────────────────────────────────────────────
 # SCENARIO DATA
 # These are our pre-built crisis scenarios.
 # All data is generated here in Python — no external files needed.
-# ─────────────────────────────────────────────────────────────
 
-# The optimal decision for each disruption level.
-# This is what a perfect supply chain manager would do.
+
+
 OPTIMAL_DECISIONS = {
-    "minor":    "wait",              # small delay? just wait, cheapest option
-    "major":    "find_alternate",    # serious problem? find another supplier
-    "critical": "expedite",          # emergency? pay extra to rush it
+    "minor":    "wait",              
+    "major":    "find_alternate",    
+    "critical": "expedite",          
 }
 
-# Cost of each decision in USD
+
 DECISION_COSTS = {
-    "wait":             0,       # free — just wait
-    "find_alternate":   8000,    # costs money to onboard new supplier
-    "use_safety_stock": 5000,    # costs money to use emergency inventory
-    "expedite":         15000,   # most expensive — rush shipping/production
+    "wait":             0,      
+    "find_alternate":   8000,    
+    "use_safety_stock": 5000,    
+    "expedite":         15000,   
 }
 
-# How well each decision works for each disruption level
-# 1.0 = perfect choice, 0.5 = okay, 0.1 = bad choice
+
 DECISION_EFFECTIVENESS = {
     "minor": {
-        "wait":             1.0,   # perfect — no need to spend money
-        "use_safety_stock": 0.6,   # works but wastes money
-        "find_alternate":   0.4,   # overkill for minor issue
-        "expedite":         0.2,   # very wasteful for minor issue
+        "wait":             1.0,  
+        "use_safety_stock": 0.6,   
+        "find_alternate":   0.4,  
+        "expedite":         0.2,   
     },
     "major": {
-        "find_alternate":   1.0,   # perfect — get a new supplier
-        "use_safety_stock": 0.7,   # okay short term fix
-        "expedite":         0.5,   # works but expensive
-        "wait":             0.1,   # bad — major issue needs action
+        "find_alternate":   1.0,   
+        "use_safety_stock": 0.7,   
+        "expedite":         0.5,  
+        "wait":             0.1,   
     },
     "critical": {
-        "expedite":         1.0,   # perfect — emergency needs urgent action
-        "find_alternate":   0.7,   # good but slower than expedite
-        "use_safety_stock": 0.4,   # buys time but doesn't fix problem
-        "wait":             0.0,   # terrible — critical issue can't wait
+        "expedite":         1.0,   
+        "find_alternate":   0.7,  
+        "use_safety_stock": 0.4,   
+        "wait":             0.0,  
     },
 }
 
 
-# ─────────────────────────────────────────────────────────────
-# SCENARIO BUILDER
-# Creates the three task scenarios
-# ─────────────────────────────────────────────────────────────
+
 
 def build_task1_easy() -> Tuple[List[SupplierInfo], List[ProductInfo], int]:
     """
@@ -434,9 +427,7 @@ def build_task3_hard() -> Tuple[List[SupplierInfo], List[ProductInfo], int]:
     return suppliers, products, budget
 
 
-# ─────────────────────────────────────────────────────────────
-# MAIN ENVIRONMENT CLASS
-# ─────────────────────────────────────────────────────────────
+
 
 class SupplyChainEnvironment:
     """
@@ -478,10 +469,10 @@ class SupplyChainEnvironment:
         else:
             suppliers, products, budget = build_task3_hard()
 
-        # Set up fresh episode state
+        
         self._suppliers = suppliers
         self._products = products
-        self._pending_suppliers = list(suppliers)  # copy — we'll pop from this
+        self._pending_suppliers = list(suppliers)  
         self._decisions_log = {}
         self._total_budget = budget
         self._budget_remaining = budget
@@ -525,11 +516,11 @@ class SupplyChainEnvironment:
         """
         self._state.step_count += 1
 
-        # ── Find the supplier the agent is deciding about ──
+       
         supplier = self._find_supplier(action.supplier_id)
 
         if supplier is None:
-            # Agent gave an invalid supplier ID — penalize
+            
             return self._make_observation(
                 reward=-0.1,
                 done=False,
@@ -538,7 +529,7 @@ class SupplyChainEnvironment:
             )
 
         if supplier not in self._pending_suppliers:
-            # Agent is trying to decide about a supplier already handled
+           
             return self._make_observation(
                 reward=-0.05,
                 done=False,
@@ -546,41 +537,40 @@ class SupplyChainEnvironment:
                        f"Remaining: {[s.supplier_id for s in self._pending_suppliers]}",
             )
 
-        # ── Score the decision ──
+       
         reward, result_message = self._score_decision(supplier, action.decision)
 
-        # ── Apply cost ──
+       
         cost = DECISION_COSTS.get(action.decision, 0)
         if cost > self._budget_remaining:
-            # Over budget — penalize and don't apply decision
+           
             reward = -0.2
             result_message = (
                 f"Decision '{action.decision}' costs ${cost:,} but only "
                 f"${self._budget_remaining:,} remaining. Decision rejected."
             )
         else:
-            # Valid — apply the decision
+          
             self._budget_remaining -= cost
             self._pending_suppliers.remove(supplier)
             self._decisions_log[supplier.supplier_id] = action.decision
 
-            # Track correct decisions
+           
             optimal = OPTIMAL_DECISIONS.get(supplier.disruption_level, "wait")
             if action.decision == optimal:
                 self._correct_decisions += 1
 
-            # Track critical errors
-            # A critical error = choosing "wait" for a critical supplier
+           
             if supplier.disruption_level == "critical" and action.decision == "wait":
                 self._critical_errors += 1
 
-        # ── Update running score ──
+       
         self._current_score = self._calculate_score()
         self._state.budget_remaining_usd = self._budget_remaining
         self._state.correct_decisions = self._correct_decisions
         self._state.critical_errors = self._critical_errors
 
-        # ── Check if episode is done ──
+        
         done = len(self._pending_suppliers) == 0
 
         if done:
@@ -600,9 +590,7 @@ class SupplyChainEnvironment:
         """Return current episode state"""
         return self._state
 
-    # ─────────────────────────────────────────
-    # PRIVATE HELPER METHODS
-    # ─────────────────────────────────────────
+   
 
     def _find_supplier(self, supplier_id: str) -> Optional[SupplierInfo]:
         """Find a supplier by ID from all suppliers (not just pending)"""
@@ -665,15 +653,15 @@ class SupplyChainEnvironment:
 
         avg_effectiveness = total_effectiveness / len(self._decisions_log)
 
-        # Penalize critical errors heavily
+       
         critical_penalty = self._critical_errors * 0.15
 
-        # Budget efficiency bonus — reward for not wasting money
+
         budget_efficiency = self._budget_remaining / self._total_budget
         budget_bonus = budget_efficiency * 0.1
 
         score = avg_effectiveness - critical_penalty + budget_bonus
-        return max(0.0, min(1.0, score))  # clamp between 0 and 1
+        return max(0.0, min(1.0, score))  
 
     def _calculate_final_score(self) -> float:
         """
@@ -683,14 +671,14 @@ class SupplyChainEnvironment:
         if not self._decisions_log:
             return 0.0
 
-        # Base score from decision effectiveness
+    
         base_score = self._calculate_score()
 
-        # Completion bonus — reward for handling all suppliers
+        
         completion_ratio = len(self._decisions_log) / max(self._total_decisions, 1)
         completion_bonus = completion_ratio * 0.1
 
-        # Critical error penalty
+     
         critical_penalty = self._critical_errors * 0.2
 
         final = base_score + completion_bonus - critical_penalty
