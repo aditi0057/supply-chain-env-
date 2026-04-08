@@ -20,4 +20,5 @@ COPY --chown=user . /app
 EXPOSE 7860
 
 # Start the server
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
+ENV PYTHONPATH="/app"
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860", "--app-dir", "/app"]
