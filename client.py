@@ -49,7 +49,7 @@ class SupplyChainEnv:
         """
         base_url: where the server is running
                   locally:  "http://localhost:8000"
-                  on HF:    "https://yourusername-supply-chain-env.hf.space"
+                  on HF:    "https://aditi0057-supply-chain-env.hf.space"
         """
         self.base_url = base_url.rstrip("/")
         self._check_connection()
