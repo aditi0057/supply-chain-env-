@@ -1,16 +1,19 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.backends.legacy:build"
-
 [project]
 name = "supply-chain-triage"
 version = "1.0.0"
-description = "Supply Chain Disruption Triage Environment"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
-    "fastapi",
-    "uvicorn",
-    "pydantic",
-    "requests",
-    "openai",
+    "fastapi==0.115.0",
+    "uvicorn==0.30.0",
+    "pydantic==2.7.0",
+    "requests==2.32.0",
+    "openai==1.40.0",
+    "openenv-core>=0.2.0",
 ]
+
+[project.scripts]
+server = "server.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
