@@ -7,10 +7,16 @@ from typing import List, Optional
 from openai import OpenAI
 from client import SupplyChainEnv
 
+# ── Credentials — read from environment ──
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
-API_KEY      = os.getenv("HF_TOKEN")
-ENV_BASE_URL = os.getenv("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
+# Fix: never pass None to OpenAI — use empty string as fallback
+API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "dummy-key"
+
+ENV_BASE_URL = os.getenv(
+    "ENV_BASE_URL",
+    "https://aditi0057-supply-chain-triage.hf.space"
+)
 
 MAX_STEPS   = 15
 TEMPERATURE = 0.2
@@ -28,7 +34,7 @@ BUDGET RULES:
 - You have a limited budget. Do not exceed it.
 - Prefer cheaper options when disruption is minor.
 - Always protect high-revenue products first.
-- Critical disruptions need immediate action — never "wait" on critical.
+- Critical disruptions need immediate action — never wait on critical.
 
 RESPONSE FORMAT:
 You must respond with valid JSON only. No explanation outside the JSON.
@@ -44,15 +50,25 @@ def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
-def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+def log_step(step: int, action: str, reward: float,
+             done: bool, error: Optional[str]) -> None:
     error_val = error if error else "null"
-    done_val = str(done).lower()
-    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
+    done_val  = str(done).lower()
+    print(
+        f"[STEP] step={step} action={action} "
+        f"reward={reward:.2f} done={done_val} error={error_val}",
+        flush=True,
+    )
 
 
-def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int,
+            score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
+    print(
+        f"[END] success={str(success).lower()} steps={steps} "
+        f"score={score:.3f} rewards={rewards_str}",
+        flush=True,
+    )
 
 
 def build_prompt(observation) -> str:
@@ -65,7 +81,7 @@ def build_prompt(observation) -> str:
             f"\n    Daily cost: ${s.daily_cost_usd:,}"
             f"\n    Products: {', '.join(s.products_supplied)}"
         )
-    prompt = f"""CURRENT SITUATION:
+    return f"""CURRENT SITUATION:
 Budget remaining: ${observation.budget_remaining_usd:,}
 Decisions remaining: {observation.decisions_remaining}
 Current score: {observation.current_score:.2f}
@@ -77,10 +93,9 @@ LAST RESULT: {observation.last_action_result}
 
 Pick the most urgent supplier and respond with JSON only.
 """
-    return prompt
 
 
-def parse_decision(response_text: str) -> dict:
+def parse_decision(response_text: str) -> Optional[dict]:
     if not response_text:
         return None
     try:
@@ -96,26 +111,47 @@ def parse_decision(response_text: str) -> dict:
     return None
 
 
-def get_fallback_decision(observation) -> dict:
+def get_fallback_decision(observation) -> Optional[dict]:
     if not observation.disrupted_suppliers:
         return None
     priority = {"critical": 0, "major": 1, "minor": 2}
-    supplier = sorted(observation.disrupted_suppliers, key=lambda s: priority.get(s.disruption_level, 3))[0]
-    decision_map = {"minor": "wait", "major": "find_alternate", "critical": "expedite"}
+    supplier = sorted(
+        observation.disrupted_suppliers,
+        key=lambda s: priority.get(s.disruption_level, 3)
+    )[0]
+    decision_map = {
+        "minor":    "wait",
+        "major":    "find_alternate",
+        "critical": "expedite",
+    }
     decision = decision_map.get(supplier.disruption_level, "wait")
-    costs = {"wait": 0, "find_alternate": 8000, "use_safety_stock": 5000, "expedite": 15000}
+    costs = {
+        "wait": 0, "find_alternate": 8000,
+        "use_safety_stock": 5000, "expedite": 15000,
+    }
     if costs.get(decision, 0) > observation.budget_remaining_usd:
-        decision = "use_safety_stock" if 5000 <= observation.budget_remaining_usd else "wait"
-    return {"supplier_id": supplier.supplier_id, "decision": decision, "reasoning": "fallback rule"}
+        decision = "use_safety_stock"
+        if 5000 > observation.budget_remaining_usd:
+            decision = "wait"
+    return {
+        "supplier_id": supplier.supplier_id,
+        "decision":    decision,
+        "reasoning":   "fallback rule",
+    }
 
 
 def run_task(env: SupplyChainEnv, client: OpenAI, task_id: str) -> float:
     log_start(task=task_id, env="supply-chain-triage", model=MODEL_NAME)
 
-    result = env.reset(task_id=task_id)
-    observation = result.observation
+    try:
+        result = env.reset(task_id=task_id)
+    except Exception as e:
+        print(f"[DEBUG] reset failed: {e}", flush=True)
+        log_end(success=False, steps=0, score=0.0, rewards=[])
+        return 0.0
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    observation = result.observation
+    messages: List[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
     rewards: List[float] = []
     steps_taken = 0
     final_score = 0.0
@@ -124,11 +160,13 @@ def run_task(env: SupplyChainEnv, client: OpenAI, task_id: str) -> float:
         if result.done or observation.decisions_remaining == 0:
             break
 
-        user_prompt = build_prompt(observation)
-        messages.append({"role": "user", "content": user_prompt})
+        messages.append({
+            "role": "user",
+            "content": build_prompt(observation),
+        })
 
         decision_data = None
-        error_msg = None
+        error_msg     = None
 
         try:
             completion = client.chat.completions.create(
@@ -149,42 +187,70 @@ def run_task(env: SupplyChainEnv, client: OpenAI, task_id: str) -> float:
         if not decision_data:
             break
 
-        action_str = f"{decision_data.get('supplier_id')}:{decision_data.get('decision')}"
-
-        result = env.step(
-            supplier_id=decision_data.get("supplier_id", ""),
-            decision=decision_data.get("decision", "wait"),
-            reasoning=decision_data.get("reasoning", ""),
+        action_str = (
+            f"{decision_data.get('supplier_id')}:"
+            f"{decision_data.get('decision')}"
         )
-        observation = result.observation
-        reward = result.reward or 0.0
-        done = result.done
+
+        try:
+            result = env.step(
+                supplier_id=decision_data.get("supplier_id", ""),
+                decision=decision_data.get("decision", "wait"),
+                reasoning=decision_data.get("reasoning", ""),
+            )
+        except Exception as e:
+            error_msg = str(e)[:80]
+            log_step(step=step, action=action_str,
+                     reward=0.0, done=False, error=error_msg)
+            break
+
+        observation  = result.observation
+        reward       = result.reward or 0.0
+        done         = result.done
 
         rewards.append(reward)
         steps_taken = step
 
-        log_step(step=step, action=action_str, reward=reward, done=done, error=error_msg)
+        log_step(step=step, action=action_str,
+                 reward=reward, done=done, error=error_msg)
 
         time.sleep(0.3)
 
-    final_state = env.state()
-    final_score = final_state.final_score
-    if final_score == 0.0:
+    # Get final score
+    try:
+        final_state  = env.state()
+        final_score  = final_state.final_score
+        if final_score == 0.0:
+            final_score = observation.current_score
+    except Exception:
         final_score = observation.current_score
 
     success = final_score >= 0.5
-    log_end(success=success, steps=steps_taken, score=final_score, rewards=rewards)
-
+    log_end(success=success, steps=steps_taken,
+            score=final_score, rewards=rewards)
     return final_score
 
 
 def main():
-    if not API_KEY:
-        print("ERROR: HF_TOKEN not set.", flush=True)
-        return
+    print(f"[DEBUG] API_BASE_URL={API_BASE_URL}", flush=True)
+    print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
+    print(f"[DEBUG] ENV_BASE_URL={ENV_BASE_URL}", flush=True)
+    print(f"[DEBUG] API_KEY set={'yes' if API_KEY != 'dummy-key' else 'no'}", flush=True)
 
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-    env = SupplyChainEnv(base_url=ENV_BASE_URL)
+    # Safe OpenAI client creation — wrapped in try/except
+    try:
+        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    except Exception as e:
+        print(f"[ERROR] Failed to create OpenAI client: {e}", flush=True)
+        # Still try to run with fallback decisions only
+        client = None
+
+    # Safe environment client creation
+    try:
+        env = SupplyChainEnv(base_url=ENV_BASE_URL)
+    except Exception as e:
+        print(f"[ERROR] Failed to connect to environment: {e}", flush=True)
+        return
 
     tasks = ["task1_easy", "task2_medium", "task3_hard"]
     scores = {}
@@ -199,7 +265,7 @@ def main():
             scores[task_id] = 0.0
 
     avg = sum(scores.values()) / len(scores)
-    print(f"\nAverage score: {avg:.3f}", flush=True)
+    print(f"\n[SUMMARY] average={avg:.3f}", flush=True)
 
 
 if __name__ == "__main__":
