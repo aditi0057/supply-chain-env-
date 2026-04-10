@@ -7,10 +7,9 @@ from typing import List, Optional
 from openai import OpenAI
 from client import SupplyChainEnv
 
-# ── Credentials — read from environment ──
+
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
-# Fix: never pass None to OpenAI — use empty string as fallback
 API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "dummy-key"
 
 ENV_BASE_URL = os.getenv(
@@ -237,15 +236,15 @@ def main():
     print(f"[DEBUG] ENV_BASE_URL={ENV_BASE_URL}", flush=True)
     print(f"[DEBUG] API_KEY set={'yes' if API_KEY != 'dummy-key' else 'no'}", flush=True)
 
-    # Safe OpenAI client creation — wrapped in try/except
+
     try:
         client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
     except Exception as e:
         print(f"[ERROR] Failed to create OpenAI client: {e}", flush=True)
-        # Still try to run with fallback decisions only
+
         client = None
 
-    # Safe environment client creation
+
     try:
         env = SupplyChainEnv(base_url=ENV_BASE_URL)
     except Exception as e:
