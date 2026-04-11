@@ -140,7 +140,6 @@ def run_task(env: SupplyChainEnv, client: OpenAI, task_id: str) -> float:
         error_msg = None
 
         try:
-            if client is not None:
                 completion = client.chat.completions.create(
                     model=MODEL_NAME,
                     messages=messages,
@@ -194,18 +193,8 @@ def main():
     print(f"[DEBUG] ENV_BASE_URL={ENV_BASE_URL}", flush=True)
     print(f"[DEBUG] API_KEY={'set' if API_KEY != 'dummy-key' else 'not set - using fallback'}", flush=True)
 
-    try:
-        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-        print("[DEBUG] OpenAI client created successfully", flush=True)
-    except Exception as e:
-        print(f"[DEBUG] OpenAI client failed: {e} - will use fallback decisions", flush=True)
-        client = None
-
-    try:
-        env = SupplyChainEnv(base_url=ENV_BASE_URL)
-    except Exception as e:
-        print(f"[ERROR] Cannot connect to environment: {e}", flush=True)
-        return
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    env = SupplyChainEnv(base_url=ENV_BASE_URL)
 
     tasks = ["task1_easy", "task2_medium", "task3_hard"]
     scores = {}
