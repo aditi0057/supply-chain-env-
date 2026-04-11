@@ -10,7 +10,7 @@ from client import SupplyChainEnv
 # ── Credentials ──
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME   = os.environ.get("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
-API_KEY      = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN") or "dummy-key"
+API_KEY      = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN", "")
 ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
 
 MAX_STEPS   = 15
@@ -187,8 +187,8 @@ def main():
 
     try:
         client = OpenAI(
-            base_url=os.environ.get("API_BASE_URL", API_BASE_URL),
-            api_key=os.environ.get("API_KEY", API_KEY),
+            base_url=API_BASE_URL,
+            api_key=API_KEY,
         )
         print("[DEBUG] OpenAI client created successfully", flush=True)
     except Exception as e:
