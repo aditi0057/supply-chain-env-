@@ -9,15 +9,15 @@ from client import SupplyChainEnv
 
 # ── Credentials ──
 
-try:
-    API_BASE_URL = os.environ["API_BASE_URL"]
-except KeyError:
-    API_BASE_URL = "https://router.huggingface.co/v1"
+# try:
+API_BASE_URL = os.environ["API_BASE_URL"]
+# except KeyError:
+#     API_BASE_URL = "https://router.huggingface.co/v1"
 
-try:
-    API_KEY = os.environ["API_KEY"]
-except KeyError:
-    API_KEY = os.environ.get("HF_TOKEN") or "dummy-key"
+# try:
+API_KEY = os.environ["API_KEY"]
+# except KeyError:
+#     API_KEY = os.environ.get("HF_TOKEN") or "dummy-key"
 
 MODEL_NAME   = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
