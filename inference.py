@@ -13,10 +13,6 @@ API_KEY      = os.environ["API_KEY"]
 MODEL_NAME   = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
 
-
-if not API_BASE_URL.rstrip("/").endswith("/v1"):
-    API_BASE_URL = API_BASE_URL.rstrip("/") + "/v1"
-
 MAX_STEPS   = 15
 TEMPERATURE = 0.2
 MAX_TOKENS  = 300
@@ -185,19 +181,14 @@ def run_task(env: SupplyChainEnv, client: OpenAI, task_id: str) -> float:
 def main():
     print(f"[DEBUG] API_BASE_URL={API_BASE_URL}", flush=True)
     print(f"[DEBUG] MODEL_NAME={MODEL_NAME}", flush=True)
-    print(f"[DEBUG] ENV_BASE_URL={ENV_BASE_URL}", flush=True)
-    print(f"[DEBUG] API_KEY={'set' if API_KEY != 'dummy-key' else 'not set - using fallback'}", flush=True)
+    print(f"[DEBUG] API_KEY=set", flush=True)
 
-    try:
-        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-    except Exception as e:
-        print(f"[DEBUG] OpenAI init error: {e}", flush=True)
-        print(f"[DEBUG] Trying without base_url modification", flush=True)
-        client = OpenAI(
-            base_url=os.environ["API_BASE_URL"],
-            api_key=API_KEY
-        )
-    
+    client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=API_KEY,
+        http_client=None
+    )
+
     env = SupplyChainEnv(base_url=ENV_BASE_URL)
 
     tasks = ["task1_easy", "task2_medium", "task3_hard"]
