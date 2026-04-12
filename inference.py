@@ -8,10 +8,10 @@ from openai import OpenAI
 from client import SupplyChainEnv
 
 # ── Credentials ──
-API_BASE_URL = os.environ["API_BASE_URL"]
-API_KEY      = os.environ["API_KEY"]
-MODEL_NAME   = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-ENV_BASE_URL = os.environ.get("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME   = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN     = os.getenv("HF_TOKEN")
+ENV_BASE_URL = os.getenv("ENV_BASE_URL", "https://aditi0057-supply-chain-triage.hf.space")
 
 MAX_STEPS   = 15
 TEMPERATURE = 0.2
@@ -185,11 +185,10 @@ def main():
 
     client = OpenAI(
         base_url=API_BASE_URL,
-        api_key=API_KEY,
-        http_client=None
+        api_key=HF_TOKEN,
     )
-
     env = SupplyChainEnv(base_url=ENV_BASE_URL)
+
 
     tasks = ["task1_easy", "task2_medium", "task3_hard"]
     scores = {}
